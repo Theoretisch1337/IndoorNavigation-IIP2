@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InNav · Indoor-Navigation HSLU Campus Rotkreuz</title>
+  <meta name="description" content="InNav - Indoor-Navigationssystem fuer den HSLU-Campus Rotkreuz: BLE-Beacons, Trilateration und RSSI-Fingerprinting fuer Turn-by-Turn-Navigation zu Raeumen." />
+
+  <!-- Tailwind via Play-CDN: kein Build-Step, kein Node/Bun (wie das Dashboard). -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: { brand: { DEFAULT: '#2563EB', dark: '#1d4ed8', light: '#dbeafe' } },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { -webkit-font-smoothing: antialiased; }
+    .grid-bg {
+      background-image:
+        radial-gradient(circle at 1px 1px, rgba(37,99,235,.12) 1px, transparent 0);
+      background-size: 28px 28px;
+    }
+  </style>
+</head>
+<body class="h-full bg-white text-zinc-900 font-sans">
+
+  <!-- ── Navbar ─────────────────────────────────────────────────── -->
+  <header class="sticky top-0 z-20 border-b border-zinc-100 bg-white/80 backdrop-blur">
+    <div class="mx-auto flex max-w-5xl items-center justify-between px-5 py-3.5">
+      <div class="flex items-center gap-2.5">
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white shadow-sm">
+          <i data-lucide="radar" class="h-4.5 w-4.5"></i>
+        </div>
+        <span class="text-sm font-bold tracking-tight">InNav</span>
+      </div>
+      <nav class="flex items-center gap-5 text-sm">
+        <a href="#how" class="hidden text-zinc-500 hover:text-zinc-900 sm:inline">Funktion</a>
+        <a href="#stack" class="hidden text-zinc-500 hover:text-zinc-900 sm:inline">Stack</a>
+        <a href="/dashboard.html" class="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 font-medium text-white shadow-sm transition hover:bg-brand-dark">
+          <i data-lucide="lock" class="h-3.5 w-3.5"></i>Dashboard
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ── Hero ───────────────────────────────────────────────────── -->
+  <section class="grid-bg border-b border-zinc-100">
+    <div class="mx-auto max-w-5xl px-5 py-20 text-center sm:py-28">
+      <span class="inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand-light/50 px-3 py-1 text-xs font-medium text-brand-dark">
+        <i data-lucide="navigation" class="h-3.5 w-3.5"></i>HSLU Campus Rotkreuz
+      </span>
+      <h1 class="mx-auto mt-6 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">
+        Indoor-Navigation,<br /><span class="text-brand">wo GPS aufhört.</span>
+      </h1>
+      <div class="mt-8 flex items-center justify-center gap-3">
+        <a href="#how" class="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-dark">
+          Wie es funktioniert<i data-lucide="arrow-down" class="h-4 w-4"></i>
+        </a>
+        <a href="/dashboard.html" class="inline-flex items-center gap-2 rounded-xl border border-zinc-200 px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50">
+          <i data-lucide="lock" class="h-4 w-4"></i>Live-Dashboard
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Wie es funktioniert ────────────────────────────────────── -->
+  <section id="how" class="mx-auto max-w-5xl px-5 py-16 sm:py-20">
+    <h2 class="text-center text-2xl font-bold tracking-tight sm:text-3xl">Wie es funktioniert</h2>
+    <p class="mx-auto mt-2 max-w-lg text-center text-sm text-zinc-500">
+      Drei Schritte vom Signal zur Position - zwei kombinierbare Verfahren.
+    </p>
+
+    <div class="mt-10 grid gap-4 sm:grid-cols-3">
+      <div class="rounded-2xl border border-zinc-100 bg-zinc-50/60 p-6">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand"><i data-lucide="bluetooth" class="h-5 w-5"></i></div>
+        <h3 class="mt-4 font-semibold">1 · Beacons funken</h3>
+        <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">ESP32-C6-Beacons senden im Gebaeude periodisch iBeacon-Pakete mit ID und Signalstaerke.</p>
+      </div>
+      <div class="rounded-2xl border border-zinc-100 bg-zinc-50/60 p-6">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand"><i data-lucide="smartphone" class="h-5 w-5"></i></div>
+        <h3 class="mt-4 font-semibold">2 · App ortet</h3>
+        <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">Die Flutter-App misst die RSSI der sichtbaren Beacons und berechnet daraus lokal die Position.</p>
+      </div>
+      <div class="rounded-2xl border border-zinc-100 bg-zinc-50/60 p-6">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand"><i data-lucide="route" class="h-5 w-5"></i></div>
+        <h3 class="mt-4 font-semibold">3 · Navigation</h3>
+        <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">Position auf dem Grundriss plus Turn-by-Turn-Fuehrung zum gewuenschten Raum.</p>
+      </div>
+    </div>
+
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      <div class="rounded-2xl border border-zinc-100 p-6">
+        <div class="flex items-center gap-2 text-brand"><i data-lucide="triangle" class="h-4 w-4"></i><span class="text-xs font-semibold uppercase tracking-wide">Verfahren A</span></div>
+        <h3 class="mt-2 font-semibold">Trilateration</h3>
+        <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">RSSI -&gt; Distanz (Pfadverlust-Modell), dann Schnittpunkt aus mindestens drei Beacons. Ohne Kalibrierung, der Standard.</p>
+      </div>
+      <div class="rounded-2xl border border-zinc-100 p-6">
+        <div class="flex items-center gap-2 text-brand"><i data-lucide="target" class="h-4 w-4"></i><span class="text-xs font-semibold uppercase tracking-wide">Verfahren B</span></div>
+        <h3 class="mt-2 font-semibold">RSSI-Fingerprinting</h3>
+        <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">Vorab erfasste Signal-Signaturen je Punkt, live per k-Nearest-Neighbors abgeglichen. Robuster in komplexen Raeumen.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Komponenten / Stack ────────────────────────────────────── -->
+  <section id="stack" class="border-y border-zinc-100 bg-zinc-50/60">
+    <div class="mx-auto max-w-5xl px-5 py-16 sm:py-20">
+      <h2 class="text-center text-2xl font-bold tracking-tight sm:text-3xl">Drei Bausteine</h2>
+      <div class="mt-10 grid gap-4 sm:grid-cols-3">
+        <div class="rounded-2xl border border-zinc-100 bg-white p-6 shadow-sm">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand"><i data-lucide="smartphone" class="h-5 w-5"></i></div>
+          <h3 class="mt-4 font-semibold">Mobile-App</h3>
+          <p class="mt-1.5 text-sm text-zinc-600">Flutter (iOS/Android). Karte, Ortung, Kalibrierung, Besucher- und Admin-Modus.</p>
+        </div>
+        <div class="rounded-2xl border border-zinc-100 bg-white p-6 shadow-sm">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand"><i data-lucide="cpu" class="h-5 w-5"></i></div>
+          <h3 class="mt-4 font-semibold">Beacons</h3>
+          <p class="mt-1.5 text-sm text-zinc-600">XIAO ESP32-C6 mit BLE-Advertising (PlatformIO / Arduino), akkubetrieben.</p>
+        </div>
+        <div class="rounded-2xl border border-zinc-100 bg-white p-6 shadow-sm">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand"><i data-lucide="server" class="h-5 w-5"></i></div>
+          <h3 class="mt-4 font-semibold">C2-Server</h3>
+          <p class="mt-1.5 text-sm text-zinc-600">PocketBase: Beacon-Monitoring, Telemetrie und geteilte Konfiguration.</p>
+        </div>
+      </div>
+
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-2">
+        <span class="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600">Flutter / Dart</span>
+        <span class="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600">ESP32-C6 / BLE</span>
+        <span class="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600">PocketBase</span>
+        <span class="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600">Trilateration</span>
+        <span class="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600">Fingerprinting</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ─────────────────────────────────────────────────── -->
+  <footer class="mx-auto max-w-5xl px-5 py-12 text-center">
+    <div class="flex items-center justify-center gap-2 text-zinc-400">
+      <i data-lucide="graduation-cap" class="h-4 w-4"></i>
+      <span class="text-sm">HSLU - Modul IIP2 FS26 · Indoor-Navigation</span>
+    </div>
+    <p class="mt-2 text-xs text-zinc-400">InNav · Theo Renz · Prototyp</p>
+  </footer>
+
+  <script>if (window.lucide) lucide.createIcons();</script>
+</body>
+</html>

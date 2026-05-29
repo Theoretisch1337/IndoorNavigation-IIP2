@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InNav C2 · Admin Dashboard</title>
+  <meta name="description" content="Monitoring der InNav-Indoor-Navigation-Beacons" />
+
+  <!-- Tailwind via Play-CDN: kein Build-Step, kein Node/Bun. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide-Icons (gleiche Icon-Sprache wie die Mobile-App). -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: { brand: { DEFAULT: '#2563EB', dark: '#1d4ed8' } },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { -webkit-font-smoothing: antialiased; }
+    @keyframes pulse-ring { 0% { transform: scale(.8); opacity: .8 } 80%,100% { transform: scale(1.8); opacity: 0 } }
+    .pulse-dot::before { content:''; position:absolute; inset:0; border-radius:9999px; background:inherit; animation:pulse-ring 1.8s cubic-bezier(.2,.6,.4,1) infinite; }
+  </style>
+</head>
+<body class="h-full bg-zinc-50 text-zinc-900 font-sans">
+  <div id="app" class="min-h-full hidden">
+    <!-- ── Header ───────────────────────────────────────────────── -->
+    <header class="sticky top-0 z-10 border-b border-zinc-200 bg-white/80 backdrop-blur">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+        <div class="flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white shadow-sm">
+            <i data-lucide="radar" class="h-5 w-5"></i>
+          </div>
+          <div>
+            <h1 class="text-sm font-semibold leading-tight">InNav <span class="text-zinc-400">C2</span></h1>
+            <p class="text-xs text-zinc-500">Beacon-Monitoring · indoornav.theoretisch.ch</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-zinc-500">
+          <span id="live-dot" class="relative inline-flex h-2.5 w-2.5 rounded-full bg-zinc-300"></span>
+          <span id="last-updated">verbinde …</span>
+          <button id="logout-btn" class="ml-1 rounded-md p-1 text-zinc-400 transition hover:text-zinc-700" title="Abmelden"><i data-lucide="log-out" class="h-4 w-4"></i></button>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <!-- ── Stat-Karten: Gesamt + die drei Status ─────────────── -->
+      <section class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <div class="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div class="flex items-center gap-2 text-zinc-500"><i data-lucide="bluetooth" class="h-4 w-4"></i><span class="text-xs font-medium">Beacons</span></div>
+          <p id="stat-total" class="mt-2 text-2xl font-bold tabular-nums">–</p>
+        </div>
+        <div class="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div class="flex items-center gap-2 text-zinc-500"><i data-lucide="circle-check" class="h-4 w-4"></i><span class="text-xs font-medium">OK</span></div>
+          <p id="stat-ok" class="mt-2 text-2xl font-bold tabular-nums text-emerald-600">–</p>
+        </div>
+        <div class="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div class="flex items-center gap-2 text-zinc-500"><i data-lucide="battery-warning" class="h-4 w-4"></i><span class="text-xs font-medium">Akku leer</span></div>
+          <p id="stat-low" class="mt-2 text-2xl font-bold tabular-nums text-red-600">–</p>
+        </div>
+        <div class="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div class="flex items-center gap-2 text-zinc-500"><i data-lucide="power-off" class="h-4 w-4"></i><span class="text-xs font-medium">Offline</span></div>
+          <p id="stat-offline" class="mt-2 text-2xl font-bold tabular-nums text-zinc-500">–</p>
+        </div>
+      </section>
+
+      <!-- ── Beacon-Tabelle ────────────────────────────────────── -->
+      <section class="mt-6 rounded-xl border border-zinc-200 bg-white shadow-sm">
+        <div class="flex items-center justify-between border-b border-zinc-100 px-4 py-3 sm:px-5">
+          <h2 class="flex items-center gap-2 text-sm font-semibold"><i data-lucide="list" class="h-4 w-4 text-zinc-400"></i>Beacons</h2>
+          <span class="hidden items-center gap-3 text-xs text-zinc-400 sm:flex">
+            <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>OK</span>
+            <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-red-500"></span>Akku leer</span>
+            <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-zinc-400"></span>Offline</span>
+          </span>
+        </div>
+
+        <!-- Desktop-Tabelle -->
+        <div class="hidden overflow-x-auto sm:block">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-zinc-100 text-left text-xs font-medium uppercase tracking-wide text-zinc-400">
+                <th class="px-5 py-2.5">Beacon</th>
+                <th class="px-3 py-2.5">Stock</th>
+                <th class="px-3 py-2.5">RSSI</th>
+                <th class="px-3 py-2.5">Letzte Sicht</th>
+                <th class="px-5 py-2.5 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody id="beacon-rows" class="divide-y divide-zinc-50"></tbody>
+          </table>
+        </div>
+
+        <!-- Mobile-Karten -->
+        <div id="beacon-cards" class="divide-y divide-zinc-100 sm:hidden"></div>
+
+        <div id="empty-state" class="hidden px-5 py-16 text-center">
+          <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100">
+            <i data-lucide="satellite-dish" class="h-6 w-6 text-zinc-400"></i>
+          </div>
+          <p class="mt-3 text-sm font-medium text-zinc-700">Noch keine Beacons gemeldet</p>
+          <p class="mt-1 text-xs text-zinc-500">Sobald die App Telemetrie sendet, erscheinen die Beacons hier.</p>
+        </div>
+      </section>
+
+      <p id="footer-line" class="mt-4 text-center text-xs text-zinc-400">
+        InNav C2 · PocketBase · automatische Aktualisierung alle 5&nbsp;s
+      </p>
+    </main>
+  </div>
+
+  <!-- Login-Overlay (leichter Schutz: Daten nur nach Anmeldung sichtbar) -->
+  <div id="login-overlay" class="fixed inset-0 z-30 flex items-center justify-center bg-zinc-50 px-4">
+    <form id="login-form" class="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <div class="mb-5 flex items-center gap-2.5">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white"><i data-lucide="lock" class="h-5 w-5"></i></div>
+        <div>
+          <h1 class="text-sm font-semibold leading-tight">InNav <span class="text-zinc-400">C2</span></h1>
+          <p class="text-xs text-zinc-500">Dashboard-Login</p>
+        </div>
+      </div>
+      <label class="block text-xs font-medium text-zinc-600" for="login-email">E-Mail</label>
+      <input id="login-email" type="email" autocomplete="username" required class="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand" />
+      <label class="mt-3 block text-xs font-medium text-zinc-600" for="login-password">Passwort</label>
+      <input id="login-password" type="password" autocomplete="current-password" required class="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand" />
+      <p id="login-error" class="mt-3 hidden rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">Login fehlgeschlagen - E-Mail oder Passwort falsch.</p>
+      <button id="login-btn" type="submit" class="mt-4 w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-60">Anmelden</button>
+      <button id="forgot-btn" type="button" class="mt-3 block w-full text-center text-xs text-brand hover:underline">Passwort vergessen?</button>
+      <p id="reset-msg" class="mt-2 hidden text-center text-xs text-emerald-700"></p>
+      <a href="/" class="mt-3 block text-center text-xs text-zinc-400 hover:text-zinc-600">&larr; Zur Startseite</a>
+    </form>
+  </div>
+
+  <script>
+    'use strict';
+
+    // Schwellen
+    // Ab wann ohne Signal als „offline/tot" gewertet wird. Bewusst grosszügig:
+    // ein Beacon wird nur gemeldet, wenn ein scannendes Handy in der Nähe ist —
+    // kurze Lücken (niemand in Reichweite) sollen ihn nicht sofort „tot" zeigen.
+    const OFFLINE_AFTER_MS = 15 * 60 * 1000; // 15 min
+    const LOW_BATTERY_BELOW = 20;            // Akku-Flag „kritisch" (Firmware = 5) landet hier
+    const REFRESH_MS = 5000;
+    const $ = (id) => document.getElementById(id);
+
+    /**
+     * Sicherer DOM-Builder: dynamische Werte nur als textContent oder
+     * Klassen/Attribute — nie als innerHTML (XSS-frei).
+     */
+    function h(tag, attrs, kids) {
+      const node = document.createElement(tag);
+      if (attrs) {
+        for (const key in attrs) {
+          if (attrs[key] == null) continue;
+          if (key === 'class') node.className = attrs[key];
+          else if (key === 'text') node.textContent = attrs[key];
+          else node.setAttribute(key, attrs[key]);
+        }
+      }
+      if (kids) {
+        for (const child of kids) {
+          if (child == null) continue;
+          node.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+        }
+      }
+      return node;
+    }
+
+    /** Relative Zeit ("vor 12 s", "vor 3 min", "vor 2 h", "vor 6 d"). */
+    function relTime(iso) {
+      if (!iso) return '–';
+      const then = new Date(String(iso).replace(' ', 'T')).getTime();
+      if (isNaN(then)) return '–';
+      const s = Math.max(0, Math.round((Date.now() - then) / 1000));
+      if (s < 60) return 'vor ' + s + ' s';
+      const m = Math.round(s / 60);
+      if (m < 60) return 'vor ' + m + ' min';
+      const hrs = Math.round(m / 60);
+      if (hrs < 48) return 'vor ' + hrs + ' h';
+      return 'vor ' + Math.round(hrs / 24) + ' d';
+    }
+
+    function lastSeenMs(iso) {
+      if (!iso) return Infinity;
+      const then = new Date(String(iso).replace(' ', 'T')).getTime();
+      return isNaN(then) ? Infinity : Date.now() - then;
+    }
+
+    /**
+     * Drei ehrliche Status statt eines Fake-Prozents (Akku-Wert ist wegen
+     * ADR-007 binär: 100 = ok, 5 = kritisch):
+     *   ok       – kürzlich gesehen + Akku-Flag in Ordnung
+     *   low      – kürzlich gesehen, aber Akku-Flag kritisch (bald tot)
+     *   offline  – länger kein Signal (tot / aus / Akku komplett leer)
+     */
+    function beaconStatus(b) {
+      const age = lastSeenMs(b.lastSeenAt);
+      if (age >= OFFLINE_AFTER_MS) {
+        return { group: 'offline', label: 'Offline', dot: 'bg-zinc-400',
+                 badge: 'bg-zinc-100 text-zinc-600' };
+      }
+      const bat = b.lastBatteryPercent;
+      if (bat != null && bat > 0 && bat < LOW_BATTERY_BELOW) {
+        return { group: 'low', label: 'Akku leer', dot: 'bg-red-500',
+                 badge: 'bg-red-50 text-red-700' };
+      }
+      return { group: 'ok', label: 'OK', dot: 'bg-emerald-500',
+               badge: 'bg-emerald-50 text-emerald-700' };
+    }
+
+    function statusBadge(st) {
+      return h('span', {
+        class: 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ' + st.badge,
+      }, [
+        h('span', { class: 'h-1.5 w-1.5 rounded-full ' + st.dot }),
+        st.label,
+      ]);
+    }
+
+    function beaconRow(b) {
+      const st = beaconStatus(b);
+      // Beacon-ID ist immer primaer sichtbar; die optionale Notiz steht als
+      // kleine Zweitzeile darunter (plus title-Tooltip beim Hovern).
+      const note = (b.label || '').trim();
+      return h('tr', { class: 'hover:bg-zinc-50/70' }, [
+        h('td', { class: 'px-5 py-3' }, [
+          h('div', { class: 'flex items-center gap-3' }, [
+            h('span', { class: 'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-xs font-bold text-brand', text: String(b.beaconId) }),
+            h('div', { class: 'min-w-0' }, [
+              h('span', { class: 'block font-medium', text: 'Beacon #' + b.beaconId }),
+              note ? h('span', { class: 'block truncate text-xs text-zinc-500', title: note, text: note }) : null,
+            ]),
+          ]),
+        ]),
+        h('td', { class: 'px-3 py-3 text-zinc-500', text: b.floorId || '–' }),
+        h('td', { class: 'px-3 py-3 tabular-nums text-zinc-600', text: (b.lastRssi != null ? b.lastRssi : '–') + ' dBm' }),
+        h('td', { class: 'px-3 py-3 text-zinc-500', text: relTime(b.lastSeenAt) }),
+        h('td', { class: 'px-5 py-3 text-right' }, [statusBadge(st)]),
+      ]);
+    }
+
+    function beaconCard(b) {
+      const st = beaconStatus(b);
+      const note = (b.label || '').trim();
+      return h('div', { class: 'flex items-center gap-3 px-4 py-3' }, [
+        h('span', { class: 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-sm font-bold text-brand', text: String(b.beaconId) }),
+        h('div', { class: 'min-w-0 flex-1' }, [
+          h('div', { class: 'flex items-center justify-between gap-2' }, [
+            h('p', { class: 'truncate font-medium', text: 'Beacon #' + b.beaconId }),
+            statusBadge(st),
+          ]),
+          note ? h('p', { class: 'mt-0.5 truncate text-xs text-zinc-600', title: note, text: note }) : null,
+          h('p', { class: 'mt-0.5 text-xs text-zinc-500', text: (b.lastRssi != null ? b.lastRssi : '–') + ' dBm · ' + relTime(b.lastSeenAt) }),
+        ]),
+      ]);
+    }
+
+    // --- Auth (leichter Schutz: Daten nur mit Login lesbar) --------------
+    let authToken = localStorage.getItem('innav_token') || '';
+    let refreshTimer = null;
+
+    async function api(path) {
+      const headers = { Accept: 'application/json' };
+      if (authToken) headers.Authorization = authToken;
+      const r = await fetch(path, { headers });
+      if (r.status === 401 || r.status === 403) {
+        showLogin(); // Token fehlt/abgelaufen -> zurueck zum Login
+        throw new Error('unauthorized');
+      }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }
+
+    function showLogin() {
+      authToken = '';
+      localStorage.removeItem('innav_token');
+      if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+      $('app').classList.add('hidden');
+      $('login-overlay').classList.remove('hidden');
+    }
+
+    function showDashboard() {
+      $('login-overlay').classList.add('hidden');
+      $('app').classList.remove('hidden');
+      refresh();
+      if (!refreshTimer) refreshTimer = setInterval(refresh, REFRESH_MS);
+    }
+
+    async function login(ev) {
+      ev.preventDefault();
+      const btn = $('login-btn');
+      const err = $('login-error');
+      err.classList.add('hidden');
+      btn.disabled = true;
+      try {
+        const r = await fetch('/api/collections/users/auth-with-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            identity: $('login-email').value.trim(),
+            password: $('login-password').value,
+          }),
+        });
+        if (!r.ok) throw new Error('login failed');
+        const data = await r.json();
+        authToken = data.token;
+        localStorage.setItem('innav_token', authToken);
+        showDashboard();
+      } catch (_) {
+        err.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function refresh() {
+      try {
+        const beaconsRes = await api('/api/collections/beacons/records?perPage=200&sort=beaconId');
+        const beacons = beaconsRes.items || [];
+
+        // Telemetrie der letzten Stunde (nur Anzahl, für die Fusszeile).
+        const since = new Date(Date.now() - 3600 * 1000).toISOString().replace('T', ' ');
+        let telemetryCount = 0;
+        try {
+          const tRes = await api('/api/collections/telemetry/records?perPage=1&filter=' + encodeURIComponent('ts > "' + since + '"'));
+          telemetryCount = tRes.totalItems || 0;
+        } catch (_) { /* Filter-Fehler nicht fatal */ }
+
+        // Status je Beacon einmal berechnen.
+        const stats = { ok: 0, low: 0, offline: 0 };
+        for (const b of beacons) stats[beaconStatus(b).group]++;
+
+        $('stat-total').textContent = beacons.length;
+        $('stat-ok').textContent = stats.ok;
+        $('stat-low').textContent = stats.low;
+        $('stat-offline').textContent = stats.offline;
+
+        if (beacons.length === 0) {
+          $('empty-state').classList.remove('hidden');
+          $('beacon-rows').replaceChildren();
+          $('beacon-cards').replaceChildren();
+        } else {
+          $('empty-state').classList.add('hidden');
+          $('beacon-rows').replaceChildren.apply($('beacon-rows'), beacons.map(beaconRow));
+          $('beacon-cards').replaceChildren.apply($('beacon-cards'), beacons.map(beaconCard));
+        }
+
+        $('footer-line').textContent =
+          'InNav C2 · PocketBase · ' + telemetryCount + ' Telemetrie-Records / h · Auto-Refresh 5 s';
+        $('last-updated').textContent = 'aktualisiert ' + new Date().toLocaleTimeString('de-CH');
+        $('live-dot').className = 'relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 pulse-dot';
+      } catch (err) {
+        $('last-updated').textContent = 'C2 nicht erreichbar';
+        $('live-dot').className = 'relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500';
+      } finally {
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    // Passwort-Reset per Mail anstossen (PB schickt die Mail via SMTP; der
+    // Link nutzt die "Application URL" der PB-Settings -> die muss korrekt sein).
+    async function requestReset() {
+      const email = $('login-email').value.trim();
+      if (!email) { $('login-email').focus(); return; }
+      $('login-error').classList.add('hidden');
+      try {
+        await fetch('/api/collections/users/request-password-reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+      } catch (_) { /* bewusst ignorieren - keine Account-Existenz leaken */ }
+      const msg = $('reset-msg');
+      msg.textContent = 'Falls die Adresse existiert, ist eine Reset-Mail unterwegs.';
+      msg.classList.remove('hidden');
+    }
+
+    $('login-form').addEventListener('submit', login);
+    $('logout-btn').addEventListener('click', showLogin);
+    $('forgot-btn').addEventListener('click', requestReset);
+    if (window.lucide) lucide.createIcons();
+    // Start: mit gespeichertem Token direkt ins Dashboard, sonst Login.
+    if (authToken) showDashboard(); else showLogin();
+  </script>
+</body>
+</html>

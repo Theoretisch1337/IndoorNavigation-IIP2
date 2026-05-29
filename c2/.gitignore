@@ -1,0 +1,10 @@
+# PocketBase-Binary (plattformspezifisch, per README/Skript laden)
+pocketbase
+*.zip
+
+# Laufzeit-Daten (SQLite-DB, Logs, generierte Typen)
+pb_data/
+
+# Aus dem PocketBase-Release-Zip mitgeliefert (gehört nicht ins Repo)
+CHANGELOG.md
+LICENSE.md

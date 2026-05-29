@@ -1,0 +1,17 @@
+# Caddy 2 Reverse-Proxy für den InNav-C2-Server.
+# Auto-TLS via Let's Encrypt (Caddy holt + erneuert das Zertifikat selbst).
+#
+# Voraussetzung: DNS-A-Record  iip2.theoretisch.ch → <Hetzner-IP>
+# Installation:  /etc/caddy/Caddyfile  →  systemctl reload caddy
+
+iip2.theoretisch.ch {
+	reverse_proxy 127.0.0.1:8090
+
+	# PocketBase setzt eigene Header; Caddy reicht sie durch.
+	encode gzip
+
+	log {
+		output file /var/log/caddy/iip2.log
+		format console
+	}
+}

@@ -1,0 +1,28 @@
+# systemd-Service für PocketBase (InNav-C2).
+# Installation:
+#   sudo cp deploy/pocketbase.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now pocketbase
+#
+# Den Telemetrie-Token in der Environment-Zeile setzen; muss mit dem
+# apiToken der Mobile-App übereinstimmen (services/api_service.dart).
+
+[Unit]
+Description=InNav C2 (PocketBase)
+After=network.target
+
+[Service]
+Type=simple
+User=innav
+Group=innav
+WorkingDirectory=/opt/innav-c2
+ExecStart=/opt/innav-c2/pocketbase serve --http=127.0.0.1:8090
+Restart=always
+RestartSec=5
+# Telemetrie-Token (leer lassen = ungeschützt; produktiv unbedingt setzen):
+Environment=INNAV_TOKEN=
+# Schreibrechte nur aufs Arbeitsverzeichnis.
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

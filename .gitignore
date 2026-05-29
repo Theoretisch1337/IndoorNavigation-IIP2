@@ -1,0 +1,57 @@
+# Flutter
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+flutter_*.png
+linked_*.ds
+unlinked.ds
+unlinked_spec.ds
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+android/.gradle/
+android/local.properties
+android/app/build/
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# PlatformIO / ESP32
+.pio/
+.pioenvs/
+.piolibdeps/
+.vscode/
+*.elf
+*.hex
+*.bin
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# IDE
+.vscode/
+*.swp
+*.swo
+*~
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Generated
+*.g.dart
+*.freezed.dart
+
+# Projekt-intern, NIE ins oeffentliche Repo (Privacy-Boundary)
+.claude/
+.ai/
+CLAUDE.md
+*.pen
